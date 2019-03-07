@@ -1,49 +1,32 @@
 package com.gf.test02;
 
+import com.gf.utils.RabbitUtils;
+import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.UUID;
 
 public class NewTask {
 
-    private final static String QUEUE_NAME = "hello";
-
     public static void main(String[] args) {
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("127.0.0.1");
-        factory.setPort(5672);
-
-        try(
-                Connection connection = factory.newConnection();
-                Channel channel = connection.createChannel()
-                ){
-            channel.queueDeclare(QUEUE_NAME, false, false, false, null);
-
-            Thread work = new Thread(()->{
-                int index = 0;
-                while(true){
-                    String message = "instruction";
-                    message = (index + "." + message);
-                    try {
-                        channel.basicPublish("", QUEUE_NAME, null, message.getBytes());
-                        TimeUnit.SECONDS.sleep(1);
-                    } catch (IOException | InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    index++;
-                    System.out.println("[x] Sent '" + message + "'");
-                }
-
-            });
-            work.start();
-            work.join();
-
-        } catch (TimeoutException | InterruptedException | IOException e) {
+        String msg = "msg-" + UUID.randomUUID().toString();
+        Connection connection = RabbitUtils.getConnection();
+        Channel channel = null;
+        try {
+            channel = connection.createChannel();
+            channel.exchangeDelete("task_exchange");
+            channel.exchangeDeclare("task_exchange", BuiltinExchangeType.DIRECT, false); //声明交换器
+            channel.queueDeclare("task_queue", false, false, false, null);//声明队列
+            channel.queueBind("task_queue", "task_exchange", "task_msg");//将队列和交换器绑定
+            channel.basicPublish("task_exchange", "task_msg",false, null, msg.getBytes());//发送消息到交换器
+            channel.basicPublish("task_exchange", "task_msg", null, msg.getBytes());
+        } catch (IOException e) {
             e.printStackTrace();
+        }finally {
+            RabbitUtils.release(channel, connection);
         }
+        System.out.println("发送消息结束");
     }
 }

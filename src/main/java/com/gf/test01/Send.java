@@ -1,5 +1,6 @@
 package com.gf.test01;
 
+import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
@@ -21,6 +22,7 @@ public class Send {
                 Connection connection = factory.newConnection();
                 Channel channel = connection.createChannel()
                 ){
+            channel.exchangeDeclare("logs-exchange", BuiltinExchangeType.FANOUT);
             channel.queueDeclare(QUEUE_NAME, false, false, false, null);
             String message = "MSG";
 
@@ -37,10 +39,10 @@ public class Send {
 //            work.start();
 //            work.join();
 
-            channel.basicPublish("", QUEUE_NAME, null, (message + "1").getBytes());
-            channel.basicPublish("", QUEUE_NAME, null, (message + "2").getBytes());
-            channel.basicPublish("", QUEUE_NAME, null, (message + "3").getBytes());
-            channel.basicPublish("", QUEUE_NAME, null, (message + "4").getBytes());
+            channel.basicPublish("logs-exchange", "logs", null, (message + "1").getBytes());
+            channel.basicPublish("logs-exchange", "logs", null, (message + "2").getBytes());
+            channel.basicPublish("logs-exchange", "logs", null, (message + "3").getBytes());
+            channel.basicPublish("logs-exchange", "logs", null, (message + "4").getBytes());
 
             System.out.println("[x] Sent '" + message + "'");
 

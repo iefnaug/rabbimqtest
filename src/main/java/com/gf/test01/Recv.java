@@ -3,7 +3,6 @@ package com.gf.test01;
 import com.rabbitmq.client.*;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeoutException;
 
 public class Recv {
@@ -15,13 +14,16 @@ public class Recv {
         factory.setHost("localhost");
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
+        AMQP.Confirm.SelectOk selectOk = channel.confirmSelect();
+        channel.exchangeDeclare("logs-exchange", BuiltinExchangeType.FANOUT);
         channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+        channel.queueBind(QUEUE_NAME, "logs-exchange", "logs");
         System.out.println("***Waiting for message");
 
         DeliverCallback callback = (consumerTag, message) -> {
             String result = new String(message.getBody(), "utf-8");
             System.out.println("Recieved: " +  result);
-//            channel.basicAck(message.getEnvelope().getDeliveryTag(), false);
+            channel.basicAck(message.getEnvelope().getDeliveryTag(), false);
         };
         channel.basicConsume(QUEUE_NAME, false, callback, consumerTag -> {});
 
